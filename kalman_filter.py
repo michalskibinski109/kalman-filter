@@ -1,3 +1,5 @@
+from pprint import pprint
+from matplotlib import projections
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -25,10 +27,11 @@ class Point:
     def __str__(self) -> str:
         return(f'TIME STEP: {self.time}\nloc: {self.loc:.2f}, vel: {self.velocity:.2f} \nacc: {self.acc:.2f}, acc change: {self.d_acc:.2f}')
 
-class ThreeDimPoint:
-    def __init__(self, acc=[0,0,0], d_acc=[0,0,0]) -> None:
-        self.loc = np.random.randint(-10, 10, 3)
-        self.velocity = np.random.randint(1, 10, 3)
+
+class TwoDimPoint:
+    def __init__(self, acc=[0, 0], d_acc=[0, 0]) -> None:
+        self.loc = np.random.randint(-10, 10, 2)
+        self.velocity = np.random.randint(-10, 10, 2)
         self.acc = acc
         self.d_acc = d_acc
         # self.acc = np.random.randint(-1,3)
@@ -41,21 +44,24 @@ class ThreeDimPoint:
         for _ in range(steps):
             self.history.append(list(self.loc))
             self.time += 1
-            for dim in range(3):
-                self.loc[dim] += round((1/2)*self.acc[dim]*(steps**2) + self.velocity[dim]*(steps),2)
-                self.velocity[dim] += round(self.acc[dim],2)
-                self.acc[dim] += round(self.d_acc[dim],2)
+            for dim in range(2):
+                self.loc[dim] += round((1/2)*self.acc[dim]
+                                       * (steps**2) + self.velocity[dim]*(steps), 2)
+                self.velocity[dim] += round(self.acc[dim], 2)
+                self.acc[dim] += round(self.d_acc[dim], 2)
+        print(self.history)
 
     def __str__(self) -> str:
         return(f'TIME STEP: {self.time}\nloc: {self.loc}, vel: {self.velocity} \nacc: {self.acc}, acc change: {self.d_acc}')
 
     def plotRoute(self):
-        ax = plt.axes(projection='3d')
+        ax = plt.axes()
         a = np.array(self.history).T
-        ax.plot3D(*a, 'gray')
+        ax.plot(*a, 'gray')
         plt.show()
 
-class OneDimFilters: 
+
+class OneDimFilters:
     def __init__(self, observations=[]) -> None:
         self.obs = observations
 
@@ -80,7 +86,7 @@ class OneDimFilters:
             x_pred[n] = x_temp + v_pred[n]
         return x_pred
 
-    def alphaBetaGammaFilter(self, alpha=.5, beta=.4, gamma = .1):
+    def alphaBetaGammaFilter(self, alpha=.5, beta=.4, gamma=.1):
         N = len(self.obs)
         x_pred = np.zeros(len(self.obs))
         v_pred = np.zeros_like(x_pred)
@@ -95,7 +101,7 @@ class OneDimFilters:
             x_pred[n] = x_temp + v_pred[n] + a_pred[n]*.5
         return x_pred
 
-    def kalmanFilter(self, r = 5, std = 15, q = .01):
+    def kalmanFilter(self, r=5, std=15, q=.01):
         N = len(self.obs)
         X = np.zeros(N)
         K = np.zeros(N)
@@ -103,39 +109,90 @@ class OneDimFilters:
         X[0] = self.obs[0]  # is given
         P[0] = std  # is given
         for n in range(1, N):
-            K[n] = P[n - 1]/(P[n - 1]+ r)
+            K[n] = P[n - 1]/(P[n - 1] + r)
             X[n] = X[n - 1] + K[n]*(self.obs[n] - X[n - 1])
             P[n] = (1 - K[n])*P[n - 1] + q
         return X
 
 
-measurements = [1, 2, 3]
-x = np.array([[0.], [0.]]) # initial state (location and velocity)
-P = np.array([[1000., 0.], [0., 1000.]]) # initial uncertainty
-u = np.array([[0.], [0.]]) # external motion
-F = np.array([[1., 1.], [0, 1.]]) # next state function
-H = np.array([[1., 0.]]) # measurement function
-R = np.array([[1.]]) # measurement uncertainty
-I = np.array([[1., 0.], [0., 1.]]) # identity matrix
-
-def ThreeDimKalman(x, P):
-    for n in range(len(measurements)):
-        # measurement update
-        y = np.array([[measurements[n]]]) - H * x
-        s = H * P * H.T + R
-        K = P * H.T * np.linalg.inv(s)
-        x = x + K * y
-        P = (I - K * H) * P
-             
-        # prediction
-        x = F * x + u
-        P = F * P * F.T
-        return x,P
+class KalmanFilter:
+    def __init__(self, observations=[]) -> None:
+        self.X = np.array(observations)
+        self.pred = []
         
+    def makeQMatrix(self, q, dims=2, timeStep=1):
+        matrix = [[4, 2, 2], [2, 1, 1], [2, 1, 1]]
+        N = 3
+        Q = np.zeros(shape=(N*dims, N*dims))
+        for y in range(N):
+            for x in range(N):
+                Q[y][x] = round(timeStep/matrix[y][x], 3)
+                Q[y + 3][x + 3] = Q[y][x]
+        return Q*q
 
+    def makeFMatrix(self, dims=2, timeStep=1):
+        N = 3
+        matrix = [[1, 1, .5], [0, 1, 1], [0, 0, 1]]
+        F = np.zeros(shape=(N*dims, N*dims))
+        for y in range(N):
+            for x in range(N):
+                F[y][x] = round(timeStep*(matrix[y][x]), 3)
+                F[y + 3][x + 3] = F[y][x]
+        return F
 
-print(ThreeDimKalman(x, P))
-# p3d = ThreeDimPoint([2,10,.2], [-1,-1,.2])
+    def makeHMatrix(self, dims=2):
+        return np.array([[1, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0]])
+
+    def makeRMatrix(self, variance):
+        return np.array([[variance[0], 0], [0, variance[-1]]])
+
+    
+    def TwoDimKalman(self, r=5, x_var=(.2, .1), q=.01, acc_var=.5):
+        '''
+        `acc_var` - random variance in acceleration
+        '''
+        N = len(self.X)
+        Q = self.makeQMatrix(q)
+        F = self.makeFMatrix()
+        R = self.makeRMatrix(x_var)
+        x_pred = np.zeros((N, 6, 2))
+        x_pred[0,0,0] = self.X[0,0]
+        x_pred[0,3,1] = self.X[0,1]
+        K = np.zeros((N, 6, 2))
+        P = np.zeros((N, 6, 6))
+        H = self.makeHMatrix()
+        for n in range(1, N):
+            P[n] = np.dot(np.dot(F, P[n - 1]),F.T) + Q
+            K[n] = np.dot(np.dot(P[n-1], H.T), np.linalg.inv(np.dot(np.dot(H,P[n - 1]),H.T)  + R))
+            x_pred[n] = x_pred[n - 1] + np.dot(K[n],(self.X[n] - np.dot(H,x_pred[n - 1])))
+        self.pred = x_pred
+        return x_pred
+    
+    def plot(self):
+        time = list(range(len(self.X)))
+        ax = plt.axes(projection = '3d')
+        a = np.array(self.X).T
+        print(a)
+        ax.plot3D(*a,time, 'gray')
+        x = self.pred[:,0,0]
+        y = self.pred[:,3,1]
+        ax.scatter3D(x, y, time)
+        plt.legend(['true', 'predicted'])
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('time')
+
+        plt.show()
+
+a = [(2, 3), (3, 5), (4, 6), (5, 22), (6, 51), (7, 6), (8, 6)]
+
+p2d = TwoDimPoint(np.random.randint(-2,2,3), np.random.randint(-1,1,3))
+p2d(50)
+a = p2d.history
+m = KalmanFilter(a)
+m.TwoDimKalman()
+m.plot()
+#p3d = ThreeDimPoint([2,10,.2], [-1,-1,.2])
 # for i in range(100):
 #     p3d()
 #     print(p3d)
