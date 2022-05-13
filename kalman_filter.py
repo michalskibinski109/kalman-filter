@@ -55,7 +55,7 @@ class ThreeDimPoint:
         ax.plot3D(*a, 'gray')
         plt.show()
 
-class Filters:
+class OneDimFilters:
     def __init__(self, observations=[]) -> None:
         self.obs = observations
 
@@ -95,26 +95,41 @@ class Filters:
             x_pred[n] = x_temp + v_pred[n] + a_pred[n]*.5
         return x_pred
 
+    def kalmanFilter(self, r = 5, std = 15, q = .01):
+        N = len(self.obs)
+        X = np.zeros(N)
+        K = np.zeros(N)
+        P = np.zeros(N)
+        X[0] = self.obs[0]  # is given
+        P[0] = std  # is given
+        for n in range(1, N):
+            K[n] = P[n - 1]/(P[n - 1]+ r)
+            X[n] = X[n - 1] + K[n]*(self.obs[n] - X[n - 1])
+            P[n] = (1 - K[n])*P[n - 1] + q
+        return X
 
-p3d = ThreeDimPoint([2,10,.2], [-1,-1,.2])
-for i in range(100):
-    p3d()
-    print(p3d)
 
-p3d.plotRoute()
+# p3d = ThreeDimPoint([2,10,.2], [-1,-1,.2])
+# for i in range(100):
+#     p3d()
+#     print(p3d)
+
+# p3d.plotRoute()
 # p = Point(acc=.5, d_acc=-.01)
 # p(100)
 # a = p.history
 
 #a = np.array([1030, 989, 1017, 1009, 1013, 979, 1008, 1042, 1012,1011])
-# f = Filters(a)
+# f = OneDimFilters(a)
 # x = f.alphaFilter()
 # y = f.alphaBetaFilter()
 # z = f.alphaBetaGammaFilter()
+# g = f.kalmanFilter()
 # N = list(range(0, len(a)))
 # plt.plot(N, a)
 # plt.plot(x)
 # plt.plot(y)
 # plt.plot(z)
-# plt.legend(['true values', 'alpha predictet', 'alpha - beta ', 'a-b-g'])
+# plt.plot(g)
+# plt.legend(['true values', 'alpha predictet', 'alpha - beta ', 'a-b-g', 'kalman'])
 # plt.show()
