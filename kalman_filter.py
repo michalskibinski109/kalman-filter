@@ -55,7 +55,7 @@ class ThreeDimPoint:
         ax.plot3D(*a, 'gray')
         plt.show()
 
-class OneDimFilters:
+class OneDimFilters: 
     def __init__(self, observations=[]) -> None:
         self.obs = observations
 
@@ -109,6 +109,32 @@ class OneDimFilters:
         return X
 
 
+measurements = [1, 2, 3]
+x = np.array([[0.], [0.]]) # initial state (location and velocity)
+P = np.array([[1000., 0.], [0., 1000.]]) # initial uncertainty
+u = np.array([[0.], [0.]]) # external motion
+F = np.array([[1., 1.], [0, 1.]]) # next state function
+H = np.array([[1., 0.]]) # measurement function
+R = np.array([[1.]]) # measurement uncertainty
+I = np.array([[1., 0.], [0., 1.]]) # identity matrix
+
+def ThreeDimKalman(x, P):
+    for n in range(len(measurements)):
+        # measurement update
+        y = np.array([[measurements[n]]]) - H * x
+        s = H * P * H.T + R
+        K = P * H.T * np.linalg.inv(s)
+        x = x + K * y
+        P = (I - K * H) * P
+             
+        # prediction
+        x = F * x + u
+        P = F * P * F.T
+        return x,P
+        
+
+
+print(ThreeDimKalman(x, P))
 # p3d = ThreeDimPoint([2,10,.2], [-1,-1,.2])
 # for i in range(100):
 #     p3d()
