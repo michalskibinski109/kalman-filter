@@ -25,6 +25,35 @@ class Point:
     def __str__(self) -> str:
         return(f'TIME STEP: {self.time}\nloc: {self.loc:.2f}, vel: {self.velocity:.2f} \nacc: {self.acc:.2f}, acc change: {self.d_acc:.2f}')
 
+class ThreeDimPoint:
+    def __init__(self, acc=[0,0,0], d_acc=[0,0,0]) -> None:
+        self.loc = np.random.randint(-10, 10, 3)
+        self.velocity = np.random.randint(1, 10, 3)
+        self.acc = acc
+        self.d_acc = d_acc
+        # self.acc = np.random.randint(-1,3)
+        # self.d_acc = np.random.randint(-2,2)
+        self.time = 0
+        self.history = []
+
+    def __call__(self, steps=1):
+        # s = 1/2 at^2 + v0t
+        for _ in range(steps):
+            self.history.append(list(self.loc))
+            self.time += 1
+            for dim in range(3):
+                self.loc[dim] += round((1/2)*self.acc[dim]*(steps**2) + self.velocity[dim]*(steps),2)
+                self.velocity[dim] += round(self.acc[dim],2)
+                self.acc[dim] += round(self.d_acc[dim],2)
+
+    def __str__(self) -> str:
+        return(f'TIME STEP: {self.time}\nloc: {self.loc}, vel: {self.velocity} \nacc: {self.acc}, acc change: {self.d_acc}')
+
+    def plotRoute(self):
+        ax = plt.axes(projection='3d')
+        a = np.array(self.history).T
+        ax.plot3D(*a, 'gray')
+        plt.show()
 
 class Filters:
     def __init__(self, observations=[]) -> None:
@@ -67,19 +96,25 @@ class Filters:
         return x_pred
 
 
-p = Point(acc=.5, d_acc=-.01)
-p(100)
-a = p.history
+p3d = ThreeDimPoint([2,10,.2], [-1,-1,.2])
+for i in range(100):
+    p3d()
+    print(p3d)
+
+p3d.plotRoute()
+# p = Point(acc=.5, d_acc=-.01)
+# p(100)
+# a = p.history
 
 #a = np.array([1030, 989, 1017, 1009, 1013, 979, 1008, 1042, 1012,1011])
-f = Filters(a)
-x = f.alphaFilter()
-y = f.alphaBetaFilter()
-z = f.alphaBetaGammaFilter()
-N = list(range(0, len(a)))
-plt.plot(N, a)
-plt.plot(x)
-plt.plot(y)
-plt.plot(z)
-plt.legend(['true values', 'alpha predictet', 'alpha - beta ', 'a-b-g'])
-plt.show()
+# f = Filters(a)
+# x = f.alphaFilter()
+# y = f.alphaBetaFilter()
+# z = f.alphaBetaGammaFilter()
+# N = list(range(0, len(a)))
+# plt.plot(N, a)
+# plt.plot(x)
+# plt.plot(y)
+# plt.plot(z)
+# plt.legend(['true values', 'alpha predictet', 'alpha - beta ', 'a-b-g'])
+# plt.show()
