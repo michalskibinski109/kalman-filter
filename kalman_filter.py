@@ -28,7 +28,7 @@ class Point:
         return(f'TIME STEP: {self.time}\nloc: {self.loc:.2f}, vel: {self.velocity:.2f} \nacc: {self.acc:.2f}, acc change: {self.d_acc:.2f}')
 
 
-class TwoDimPoint:
+class MultiDimPoint:
     def __init__(self, acc=[0, 0], d_acc=[0, 0]) -> None:
         self.loc = np.random.randint(-10, 10, 2)
         self.velocity = np.random.randint(-10, 10, 2)
@@ -39,17 +39,19 @@ class TwoDimPoint:
         self.time = 0
         self.history = []
 
-    def __call__(self, steps=1):
+    def __call__(self, steps=1, noiseWeight = 1):
+        noise = (sum(self.velocity)/2)*noiseWeight/100
         # s = 1/2 at^2 + v0t
         for _ in range(steps):
             self.history.append(list(self.loc))
+            self.history[-1][0] += np.random.random()*noise
+            self.history[-1][1] += np.random.random()*noise
             self.time += 1
             for dim in range(2):
                 self.loc[dim] += round((1/2)*self.acc[dim]
                                        * (steps**2) + self.velocity[dim]*(steps), 2)
                 self.velocity[dim] += round(self.acc[dim], 2)
                 self.acc[dim] += round(self.d_acc[dim], 2)
-        print(self.history)
 
     def __str__(self) -> str:
         return(f'TIME STEP: {self.time}\nloc: {self.loc}, vel: {self.velocity} \nacc: {self.acc}, acc change: {self.d_acc}')
@@ -147,7 +149,7 @@ class KalmanFilter:
         return np.array([[variance[0], 0], [0, variance[-1]]])
 
     
-    def TwoDimKalman(self, r=5, x_var=(.2, .1), q=.01, acc_var=.5):
+    def multiDimKalman(self, r=5, x_var=(.2, .1), q=.01, acc_var=.5):
         '''
         `acc_var` - random variance in acceleration
         '''
@@ -170,9 +172,9 @@ class KalmanFilter:
     
     def plot(self):
         time = list(range(len(self.X)))
+        plt.figure(figsize=(10,10))
         ax = plt.axes(projection = '3d')
         a = np.array(self.X).T
-        print(a)
         ax.plot3D(*a,time, 'gray')
         x = self.pred[:,0,0]
         y = self.pred[:,3,1]
@@ -180,39 +182,7 @@ class KalmanFilter:
         plt.legend(['true', 'predicted'])
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-        ax.set_zlabel('time')
+        ax.set_zlabel('z')
 
         plt.show()
 
-a = [(2, 3), (3, 5), (4, 6), (5, 22), (6, 51), (7, 6), (8, 6)]
-
-p2d = TwoDimPoint(np.random.randint(-2,2,3), np.random.randint(-1,1,3))
-p2d(50)
-a = p2d.history
-m = KalmanFilter(a)
-m.TwoDimKalman()
-m.plot()
-#p3d = ThreeDimPoint([2,10,.2], [-1,-1,.2])
-# for i in range(100):
-#     p3d()
-#     print(p3d)
-
-# p3d.plotRoute()
-# p = Point(acc=.5, d_acc=-.01)
-# p(100)
-# a = p.history
-
-#a = np.array([1030, 989, 1017, 1009, 1013, 979, 1008, 1042, 1012,1011])
-# f = OneDimFilters(a)
-# x = f.alphaFilter()
-# y = f.alphaBetaFilter()
-# z = f.alphaBetaGammaFilter()
-# g = f.kalmanFilter()
-# N = list(range(0, len(a)))
-# plt.plot(N, a)
-# plt.plot(x)
-# plt.plot(y)
-# plt.plot(z)
-# plt.plot(g)
-# plt.legend(['true values', 'alpha predictet', 'alpha - beta ', 'a-b-g', 'kalman'])
-# plt.show()
