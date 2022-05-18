@@ -67,6 +67,9 @@ class OneDimFilters:
     def __init__(self, observations=[]) -> None:
         self.obs = observations
 
+    def MSE(self, y_pred):
+        return sum([(y_pred[i] - self.obs[i])**2 for i in range(len(self.obs))])/len(self.obs)
+
     def alphaFilter(self):
         N = len(self.obs)
         x_pred = np.zeros(len(self.obs))
